@@ -13,6 +13,10 @@ Conceptos y Paradigmas de Lenguajes de Programación
 
 Intérprete de un lenguaje imperativo simple utilizando ANTLR4.
 
+## Link al video de la defensa
+
+https://youtu.be/_JdpSZG7KBo
+
 ## Variante asignada
 
 Variante 2: For
