@@ -48,6 +48,7 @@ public class SemanticAnalyzer extends MiniLangBaseVisitor<Void> {
 
         String type = ctx.type().getText();
         String name = ctx.ID().getText();
+        Object value = evaluate(ctx.expression());
 
         if (symbolTable.exists(name)) {
             throw new RuntimeException(
@@ -64,7 +65,7 @@ public class SemanticAnalyzer extends MiniLangBaseVisitor<Void> {
                             + type + ".");
         }
 
-        symbolTable.declare(name, type, null);
+        symbolTable.declare(name, type, value);
 
         return null;
     }
@@ -97,9 +98,7 @@ public class SemanticAnalyzer extends MiniLangBaseVisitor<Void> {
     public Void visitExpression(MiniLangParser.ExpressionContext ctx) {
 
         if (ctx.ID() != null) {
-
             String name = ctx.ID().getText();
-
             if (!symbolTable.exists(name)) {
                 throw new RuntimeException(
                         "Error semántico: la variable '" + name + "' no fue declarada.");
@@ -107,16 +106,35 @@ public class SemanticAnalyzer extends MiniLangBaseVisitor<Void> {
         }
 
         if (ctx.getChildCount() == 3) {
-
             String operator = ctx.getChild(1).getText();
 
             if (operator.equals("/")) {
+                MiniLangParser.ExpressionContext rightExpr = ctx.expression(1);
 
-                String right = ctx.expression(1).getText();
 
-                if (right.equals("0") || right.equals("0.0")) {
-                    throw new RuntimeException(
-                            "Error semántico: división por cero.");
+                if ("0".equals(rightExpr.getText()) || "0.0".equals(rightExpr.getText())) {
+                    throw new RuntimeException("Error semántico: división por cero.");
+                }
+
+
+                if (rightExpr.ID() != null) {
+                    String variableName = rightExpr.ID().getText();
+
+                    if (!symbolTable.exists(variableName)) {
+                        throw new RuntimeException(
+                                "Error semántico: la variable '" + variableName + "' no fue declarada.");
+                    }
+
+                    VariableInfo variable = symbolTable.get(variableName);
+                    Object value = variable.getValue();
+
+                    if (value instanceof Integer && (Integer) value == 0) {
+                        throw new RuntimeException("Error semántico: división por cero.");
+                    }
+
+                    if (value instanceof Double && (Double) value == 0.0) {
+                        throw new RuntimeException("Error semántico: división por cero.");
+                    }
                 }
             }
         }
@@ -139,6 +157,54 @@ public class SemanticAnalyzer extends MiniLangBaseVisitor<Void> {
 
         visit(ctx.expression());
         visit(ctx.block());
+
+        return null;
+    }
+    
+    private Object evaluate(MiniLangParser.ExpressionContext ctx) {
+
+        if (ctx.INT() != null) {
+            return Integer.parseInt(ctx.INT().getText());
+        }
+
+        if (ctx.FLOAT() != null) {
+            return Double.parseDouble(ctx.FLOAT().getText());
+        }
+
+        if (ctx.ID() != null) {
+            VariableInfo variable = symbolTable.get(ctx.ID().getText());
+            return variable != null ? variable.getValue() : null;
+        }
+
+        if (ctx.getChildCount() == 3) {
+            Object left  = evaluate(ctx.expression(0));
+            Object right = evaluate(ctx.expression(1));
+            String op    = ctx.getChild(1).getText();
+
+            if (left instanceof Integer && right instanceof Integer) {
+                int l = (Integer) left;
+                int r = (Integer) right;
+                return switch (op) {
+                    case "+" -> l + r;
+                    case "-" -> l - r;
+                    case "*" -> l * r;
+                    case "/" -> r != 0 ? l / r : null;
+                    default  -> null;
+                };
+            }
+
+            if (left instanceof Double || right instanceof Double) {
+                double l = left  instanceof Integer ? ((Integer) left).doubleValue()  : (Double) left;
+                double r = right instanceof Integer ? ((Integer) right).doubleValue() : (Double) right;
+                return switch (op) {
+                    case "+" -> l + r;
+                    case "-" -> l - r;
+                    case "*" -> l * r;
+                    case "/" -> r != 0.0 ? l / r : null;
+                    default  -> null;
+                };
+            }
+        }
 
         return null;
     }
