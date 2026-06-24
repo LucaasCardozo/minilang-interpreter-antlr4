@@ -55,6 +55,7 @@ block
 expression
     : '(' expression ')'
     
+    | '!' expression
     | expression ('*' | '/') expression
     | expression ('+' | '-') expression
 
@@ -63,7 +64,6 @@ expression
 
     | expression '&&' expression
     | expression '||' expression
-    | '!' expression
 
     | INT
     | FLOAT

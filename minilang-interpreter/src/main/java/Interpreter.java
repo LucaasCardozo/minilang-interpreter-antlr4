@@ -54,83 +54,75 @@ public class Interpreter extends MiniLangBaseVisitor<Object> {
 
         if (ctx.ID() != null)
             return symbolTable.get(ctx.ID().getText()).getValue();
-        
-        if (ctx.getChildCount() == 3) {
 
-            String operator = ctx.getChild(1).getText();
-
-            if (operator.equals("+")) {
-
-                Object left = visit(ctx.expression(0));
-                Object right = visit(ctx.expression(1));
-
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (Integer) left + (Integer) right;
-                }
-            }
-
-            if (operator.equals("-")) {
-
-                Object left = visit(ctx.expression(0));
-                Object right = visit(ctx.expression(1));
-
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (Integer) left - (Integer) right;
-                }
-            }
-            
-            if (operator.equals("*")) {
-
-                Object left = visit(ctx.expression(0));
-                Object right = visit(ctx.expression(1));
-
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (Integer) left * (Integer) right;
-                }
-            }
-
-            if (operator.equals("/")) {
-
-                Object left = visit(ctx.expression(0));
-                Object right = visit(ctx.expression(1));
-
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (Integer) left / (Integer) right;
-                }
-            }
+        if (ctx.getChildCount() == 2 && "-".equals(ctx.getChild(0).getText())) {
+            Object operand = visit(ctx.expression(0));
+            if (operand instanceof Integer) return -(Integer) operand;
+            if (operand instanceof Double)  return -(Double) operand;
         }
         
+        if (ctx.getChildCount() == 2 && "!".equals(ctx.getChild(0).getText())) {
+            Object operand = visit(ctx.expression(0));
+            if (operand instanceof Boolean) return !(Boolean) operand;
+        }
+
         if (ctx.getChildCount() == 3) {
-
             String operator = ctx.getChild(1).getText();
-
-            Object left = visit(ctx.expression(0));
+            Object left  = visit(ctx.expression(0));
             Object right = visit(ctx.expression(1));
 
             if (left instanceof Integer && right instanceof Integer) {
-
                 int l = (Integer) left;
                 int r = (Integer) right;
+                return switch (operator) {
+                    case "+"  -> l + r;
+                    case "-"  -> l - r;
+                    case "*"  -> l * r;
+                    case "/"  -> r != 0 ? l / r : null;
+                    case "<"  -> l < r;
+                    case ">"  -> l > r;
+                    case "<=" -> l <= r;
+                    case ">=" -> l >= r;
+                    case "==" -> l == r;
+                    case "!=" -> l != r;
+                    default   -> null;
+                };
+            }
 
-                switch (operator) {
-                    case "<":
-                        return l < r;
+            if (left instanceof Double || right instanceof Double) {
+                double l = left  instanceof Integer ? ((Integer) left).doubleValue()  : (Double) left;
+                double r = right instanceof Integer ? ((Integer) right).doubleValue() : (Double) right;
+                return switch (operator) {
+                    case "+"  -> l + r;
+                    case "-"  -> l - r;
+                    case "*"  -> l * r;
+                    case "/"  -> r != 0.0 ? l / r : null;
+                    case "<"  -> l < r;
+                    case ">"  -> l > r;
+                    case "<=" -> l <= r;
+                    case ">=" -> l >= r;
+                    case "==" -> l == r;
+                    case "!=" -> l != r;
+                    default   -> null;
+                };
+            }
 
-                    case ">":
-                        return l > r;
+            if (left instanceof Boolean && right instanceof Boolean) {
+                return switch (operator) {
+                    case "==" -> left.equals(right);
+                    case "!=" -> !left.equals(right);
+                    case "||" -> (Boolean) left || (Boolean) right;
+                    case "&&" -> (Boolean) left && (Boolean) right;
+                    default   -> false;
+                };
+            }
 
-                    case "<=":
-                        return l <= r;
-
-                    case ">=":
-                        return l >= r;
-
-                    case "==":
-                        return l == r;
-
-                    case "!=":
-                        return l != r;
-                }
+            if (left instanceof String && right instanceof String) {
+                return switch (operator) {
+                    case "==" -> left.equals(right);
+                    case "!=" -> !left.equals(right);
+                    default   -> false;
+                };
             }
         }
 
